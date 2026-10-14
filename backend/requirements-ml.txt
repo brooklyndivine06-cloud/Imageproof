@@ -1,0 +1,8 @@
+# Optional: required only for IMAGEPROOF_PROVIDER=huggingface_local (self-hosted model).
+# Not needed for the hosted `http_endpoint` provider.
+#
+# For a much smaller CPU-only install, install torch first from the CPU index:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.5,<3
+transformers>=5.19,<6
+safetensors>=0.8

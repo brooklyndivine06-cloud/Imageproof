@@ -1,0 +1,121 @@
+import type { AnalysisResult, ServiceStatus } from "@/lib/types";
+
+/** TEST FIXTURES ONLY. These objects exist to exercise rendering and report code in unit tests.
+ *  They are never shipped in the app bundle and are not results of any real analysis. */
+export function makeStatus(overrides: Partial<ServiceStatus["classifier"]> = {}): ServiceStatus {
+  return {
+    service: "imageproof-api",
+    version: "1.0.0",
+    ready: (overrides.state ?? "ready") === "ready",
+    classifier: {
+      state: "ready",
+      detail: null,
+      calibrated: false,
+      thresholds: { ai: 0.85, real: 0.15, source: "configured", validated: false, description: "Test thresholds." },
+      model: {
+        provider: "Test provider",
+        name: "test/model",
+        version: "rev1",
+        task: "Binary image classification",
+        external: false,
+        data_handling: "Analysed in-process.",
+        license: null,
+        description: null,
+      },
+      ...overrides,
+    },
+    limits: {
+      max_upload_bytes: 10 * 1024 * 1024,
+      max_upload_mb: 10,
+      min_side_px: 64,
+      max_pixels: 40_000_000,
+      formats: ["JPEG", "PNG", "WEBP"],
+      mime_types: ["image/jpeg", "image/png", "image/webp"],
+      rate_limit: { requests: 20, window_seconds: 600 },
+      timeout_seconds: 60,
+    },
+    evidence_modules: { provenance: { enabled: true, available: true, library: "c2pa-python test", reason: null }, forensics: { enabled: true } },
+    evaluation: { status: "none", message: "No evaluation report has been loaded." },
+    privacy: { stores_uploads: false, external_provider: false, data_handling: "Analysed in-process.", retention: "Not stored." },
+  };
+}
+
+export function makeResult(overrides: Partial<AnalysisResult> = {}): AnalysisResult {
+  return {
+    analysis_id: "123e4567-e89b-42d3-a456-426614174000",
+    created_at: "2026-10-13T10:00:00+00:00",
+    app_version: "1.0.0",
+    processing: { status: "completed", duration_ms: 420, steps: [{ name: "classifier", status: "completed", duration_ms: 300, detail: null }] },
+    file: { format: "JPEG", mime_type: "image/jpeg", size_bytes: 123456, width: 800, height: 600, megapixels: 0.48, color_mode: "RGB", sha256: "a".repeat(64) },
+    assessment: {
+      category: "likely_ai_generated",
+      label: "Likely AI-Generated",
+      basis: "classifier",
+      headline: "Likely AI-Generated",
+      summary: "Test summary of the assessment.",
+      decision_trace: ["Classifier AI-label score 0.930."],
+      reliability: { level: "reduced", factors: [{ code: "low_resolution", severity: "caution", message: "The shorter side is 200 px." }] },
+      notes: [],
+    },
+    classification: {
+      status: "completed",
+      model: makeStatus().classifier.model!,
+      ai_score: 0.93,
+      labels: [
+        { label: "artificial", score: 0.93, role: "ai_generated" },
+        { label: "human", score: 0.07, role: "camera" },
+      ],
+      interpretation: { score_type: "raw_softmax", calibrated: false, description: "Raw output of the softmax layer. Not calibrated.", calibration: null },
+      thresholds: { ai: 0.85, real: 0.15, source: "configured", validated: false, description: "Test thresholds." },
+      decision: "ai",
+    },
+    evidence_sources: [
+      { id: "classifier", label: "Visual classifier", status: "evaluated", used_in_classification: true, summary: "A model scored the pixels." },
+      { id: "metadata", label: "Metadata", status: "not_found", used_in_classification: false, summary: "No metadata found." },
+      { id: "provenance", label: "Provenance (C2PA)", status: "not_found", used_in_classification: false, summary: "No Content Credentials found." },
+      { id: "forensics", label: "Visual forensics", status: "evaluated", used_in_classification: false, summary: "Measurements reported." },
+    ],
+    metadata: {
+      any_metadata: true,
+      exif_present: true,
+      xmp_present: false,
+      icc_profile_present: false,
+      text_chunks_present: false,
+      camera_make_model_present: true,
+      groups: [{ id: "camera", label: "Camera", fields: [{ key: "Make", label: "Camera make", value: "TestCam" }] }],
+      generator_signals: [],
+      withheld: ["GPS location"],
+      other_tag_names: [],
+      notes: ["Camera make and model are recorded in the file."],
+    },
+    provenance: {
+      status: "not_found",
+      validation_state: null,
+      title: "No Content Credentials found",
+      summary: "The file does not contain an embedded C2PA manifest.",
+      signer: null,
+      signed_at: null,
+      claim_generator: null,
+      actions: [],
+      ingredients_count: 0,
+      declares_ai_generation: false,
+      declares_partial_ai: false,
+      declares_camera_capture: false,
+      issues: [],
+      establishes: [],
+      does_not_establish: ["That the image is authentic."],
+      library: "c2pa-python test",
+    },
+    forensics: {
+      status: "completed",
+      signals: [{ id: "noise_level", label: "Noise level", value: 1.2, unit: "8-bit levels", interpretation: "Typical residual noise." }],
+      ela: { applicable: false, reason: "Not a JPEG.", mean: null, p99: null, heatmap_data_url: null, note: null },
+      notes: ["Informational only."],
+      used_in_classification: false,
+      region: "central 800×600 px region",
+    },
+    limitations: ["Results are estimates."],
+    disclaimer: "Detection results are estimates produced by statistical models and automated checks. They are not proof.",
+    ...overrides,
+  };
+}

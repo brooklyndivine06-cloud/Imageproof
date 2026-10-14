@@ -1,0 +1,31 @@
+# Example production-style stack. NOTE: written for you but not built or run in the environment where this
+# project was authored (no Docker daemon was available). Review it before relying on it.
+services:
+  backend:
+    build:
+      context: ./backend
+      args:
+        INSTALL_ML: "true"          # bundle torch + transformers for the self-hosted model provider
+    env_file: ./backend/.env        # copy backend/.env.example to backend/.env first
+    environment:
+      IMAGEPROOF_ENVIRONMENT: production
+      IMAGEPROOF_TRUSTED_PROXY_COUNT: "0"   # the frontend container is the only client of this service
+    volumes:
+      - hf-cache:/home/imageproof/.cache/huggingface   # model weights are downloaded once
+    expose:
+      - "8000"                      # not published to the host: only the frontend can reach it
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+      MAX_UPLOAD_MB: "10"           # keep equal to IMAGEPROOF_MAX_UPLOAD_MB
+    ports:
+      - "3000:3000"                 # put a TLS-terminating reverse proxy in front of this port
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  hf-cache:
